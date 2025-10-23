@@ -2,5 +2,5 @@
 
 ## Important links 
 
-[Project Guidelines]([https://www.genome.gov/](https://docs.google.com/document/d/1OWzQPeBivWoOffRSZU60gqyTzjAqp1wf0S4pbwaofs0/edit?tab=t.0))
+[Project Guidelines](https://docs.google.com/document/d/1OWzQPeBivWoOffRSZU60gqyTzjAqp1wf0S4pbwaofs0/edit?tab=t.0)
 
