@@ -13,7 +13,7 @@
 
 \section{Closed Queuing network simulation}
 
-\begin{figure}[h]
+\begin{figure}[ht]
     \centering
     \includegraphics[width=1\linewidth]{Code/Terminal Output.png}
     \caption{Terminal Output for Ex 1 Part 1}
@@ -22,7 +22,7 @@
 \section{Open Queuing network simulation}
 \subsection{Question 2.1}
 To see what the maximum sustainable throughput we need to simulate the system using different $lambdas$. In our case we will try with this list : $[7.0, 8.0, 8.5, 9.0, 9.5, 10.0]$. Also we will run the simulation for the equivalent of 1'000'000 seconds. 
-\begin{table}[h]
+\begin{table}[ht]
   \centering
   \caption{Throughput and utilizations for different arrival rates}
   \begin{tabular}{c c c c c c}
@@ -39,7 +39,7 @@ To see what the maximum sustainable throughput we need to simulate the system us
   \end{tabular}
 \end{table}
 
-As we can see in this table (which comes from our simulation), the utilisation of the CPU rise as we augment $\lambda$ until it reaches 1 when $\lambda=10$. At the same time we can see that both of the disks are still about halfway on their max performance. We can conclude that in this system the bottleneck is the CPU
+As we can see in this table (which comes from our simulation), the utilisation of the CPU rise as we augment $\lambda$ until it reaches 1 when $\lambda=10$. At the same time we can see that both of the disks are still about halfway on their max performance. We can conclude that in this system the bottleneck is the CPU in this system case. 
 
 \subsection{Question 2.2}
 
