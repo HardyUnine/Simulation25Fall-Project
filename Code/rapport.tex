@@ -1,6 +1,7 @@
 \documentclass{article}
 \usepackage{graphicx} % Required for inserting images
 \usepackage{listings}
+\usepackage{amsmath}
 
 \title{Projet of Modeling and Simulation}
 \author{Tim Gouvernon \& Keenan Hardy}
@@ -9,5 +10,37 @@
 \begin{document}
 
 \maketitle
+
+\section{Closed Queuing network simulation}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=1\linewidth]{Code/Terminal Output.png}
+    \caption{Terminal Output for Ex 1 Part 1}
+    \label{fig:placeholder}
+\end{figure}
+\section{Open Queuing network simulation}
+\subsection{Question 2.1}
+To see what the maximum sustainable throughput we need to simulate the system using different $lambdas$. In our case we will try with this list : $[7.0, 8.0, 8.5, 9.0, 9.5, 10.0]$. Also we will run the simulation for the equivalent of 1'000'000 seconds. 
+\begin{table}[ht]
+  \centering
+  \caption{Throughput and utilizations for different arrival rates}
+  \begin{tabular}{c c c c c c}
+    \hline
+    $\lambda$ & $X$ & $\rho_{\text{CPU}}$ & $\rho_{\text{fast}}$ & $\rho_{\text{slow}}$ & $\rho_{\text{sys}}$ \\
+    \hline
+    7.0  & 6.999 & 0.700 & 0.292 & 0.389 & 0.870 \\
+    8.0  & 7.999 & 0.801 & 0.333 & 0.444 & 0.926 \\
+    8.5  & 8.497 & 0.850 & 0.354 & 0.472 & 0.949 \\
+    9.0  & 8.997 & 0.900 & 0.375 & 0.500 & 0.969 \\
+    9.5  & 9.502 & 0.950 & 0.396 & 0.527 & 0.986 \\
+    10.0 & 9.997 & 1.000 & 0.417 & 0.555 & 1.000 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+As we can see in this table (which comes from our simulation), the utilisation of the CPU rise as we augment $\lambda$ until it reaches 1 when $\lambda=10$. At the same time we can see that both of the disks are still about halfway on their max performance. We can conclude that in this system the bottleneck is the CPU in this system case. 
+
+\subsection{Question 2.2}
 
 \end{document}
