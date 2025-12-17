@@ -90,7 +90,7 @@ Separate queues with JSQ load balancing from CPU to disk selection.
 
 ``python -m venv venv``
 
-``.\venv\Scripts\activate``
+``./venv/Scripts/activate``
 
 
 ### 3. Install Dependencies
