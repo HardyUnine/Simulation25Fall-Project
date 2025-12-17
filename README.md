@@ -1,19 +1,94 @@
-# Simulation25Fall-Project
-## Project description
+# Simulation Project: Closed & Open Queueing Networks
 
-❗ The simulation project submission deadline is 17 December 2025 at 23:59. To be able to submit, you must be part of a group on Moodle, either with another teammate or by yourself. You can join a group via this link. The submission should be an archive (e.g., zip) containing your code in a Jupyter Notebook file (.ipynb extension), a PDF document with your complete answers (including any plots), and a PDF/PPT with your final presentation. Grading will be done based on the answer PDF; the notebook is mainly for any extra validation or cross-checking results. You can submit at this link.
+## Overview
 
-❗ The corresponding presentations are on 18 December 2025 between 10:15 and 12:00 in UniMail room D017. Your presentation should be around 7 minutes long, with another 7 minutes for questions. You can claim a slot using this link.
+This project simulates closed and open queueing network systems to analyze throughput, response times, and the impact of hardware upgrades and load balancing strategies.
 
-## Important links 
+**Course Context:** Performance Analysis of Computer Systems  
+**Technologies:** Python, SimPy, NumPy, Matplotlib  
+**Date:** Fall 2025
 
-[Project Guidelines](https://docs.google.com/document/d/1OWzQPeBivWoOffRSZU60gqyTzjAqp1wf0S4pbwaofs0/edit?tab=t.0)
+---
 
-[Moodle Groups](https://moodle.unine.ch/mod/choicegroup/view.php?id=500197)
+## Part 1: Closed Queueing Network (Questions 1-5)
 
-[Moodle Submission Link](https://moodle.unine.ch/mod/assign/view.php?id=500208)
+A system with N=40 jobs circulating through:
+- **CPU**: 2 seconds average service time
+- **Fast Disk**: 3 seconds average service time  
+- **Slow Disk**: 30 seconds average service time
+- **Rest Area**: 15 seconds average think time
 
-[Time Slot of Presentation](https://docs.google.com/spreadsheets/d/1TI8gVWWAPkoED8dTUH5E75pPs2rhFsLxNhV7e6b22_w/edit?gid=0#gid=0)
+### Q1: Load Balancing Strategy Comparison
 
-[Overleaf Edit Link](https://www.overleaf.com/8473513476bkgskzpxbfwb#0f1341)
+**Objective:** Compare two load balancing strategies (Random, Proportional, JSQ) to maximize system throughput.
+
+**Result:** JSQ (Join-Shortest-Queue) emerged as the optimal strategy with maximum throughput ~0.367 jobs/sec.
+
+### Q2: Faster CPU Impact
+
+**Objective:** Evaluate the impact of reducing CPU service time from 2s to 1s.
+
+**Finding:** CPU upgrade had negligible impact (~0%) on throughput when disk is the bottleneck.
+
+### Q3: Second Fast Disk Impact
+
+**Objective:** Measure throughput and response time improvements by adding a second fast disk.
+
+**Result:** 
+- Throughput improvement: +35.9%
+- Response time improvement: +27.4%
+
+### Q4: Combined Improvements
+
+**Objective:** Evaluate the combined effect of both upgrades (1s CPU + 2 fast disks).
+
+**Finding:** Throughput reaches maximum ~0.700 jobs/sec (I/O bound by design).
+
+### Q5: Performance Plots
+
+**Objective:** Generate comparative plots across all 4 scenarios showing throughput and response time curves.
+
+**Output:** `q5_final_plots.png` with side-by-side throughput and response time plots.
+
+---
+
+## Part 2: Open Queueing Network (Questions 1-2)
+
+Jobs arrive via Poisson process (rate λ), process through CPU then disk, and leave.
+
+- **CPU Service Rate:** 10 jobs/sec
+- **Fast Disk Service Rate:** 12 jobs/sec
+- **Slow Disk Service Rate:** 9 jobs/sec
+
+### Q2a: Single Queue Strategy
+
+Common queue for both disks with random routing.
+
+### Q2b: Shortest Queue Strategy
+
+Separate queues with JSQ load balancing from CPU to disk selection.
+
+
+---
+
+## Installation
+
+### 1. Clone Repository
+python3 -m venv venv
+
+### 2. Create Virtual Environment
+
+**macOS:**
+python3 -m venv venv
+source venv/bin/activate
+**Windows:**
+python -m venv venv
+venv\Scripts\activate
+
+
+### 3. Install Dependencies
+
+pip install -r requirements.txt
+
+
 
