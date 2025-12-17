@@ -1,58 +1,339 @@
-\documentclass{article}
+\documentclass[a4paper,10pt]{article}
+\usepackage{hyperref}
+\usepackage{float}
 \usepackage{graphicx} % Required for inserting images
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
 \usepackage{listings}
+\usepackage{xcolor}
 \usepackage{amsmath}
+\usepackage{tikz}
+\usepackage{parskip}
+\usepackage{booktabs}
+\usepackage{adjustbox}
 
-\title{Projet of Modeling and Simulation}
-\author{Tim Gouvernon \& Keenan Hardy}
-\date{December 2025}
+\usepackage{hyperref}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{bib.bib}
+
+\usetikzlibrary{bayesnet}
+
+
+% Smaller margins
+\usepackage[margin=2.5cm]{geometry}
+
+
+\lstset{
+    language=Python,      % highlight Python code
+    basicstyle=\ttfamily, % use typewriter font
+    keywordstyle=\color{blue},
+    commentstyle=\color{teal},
+    stringstyle=\color{orange},
+    showstringspaces=false, 
+    emph={GOAL,grid_graph},          % list of words to emphasize
+    emphstyle=\color{orange},% draw a frame around the code
+}
+
+\usepackage{fancyhdr}
+\setlength{\headheight}{15pt}
+\pagestyle{fancy}
+\fancyhead{}
+\fancyhead[L]{Modeling and Simulation Systems}
+\fancyhead[R]{SA 2025}
 
 \begin{document}
+\pagenumbering{Roman}
+\begin{titlepage}
+\begin{center}
+{{\Large{\textsc{University of Neuchatel}}}} \rule[0.1cm]{15.8cm}{0.1mm}
+\rule[0.5cm]{15.8cm}{0.6mm}
+{\small{\bf Modeling and Simulation Systems}}
+\end{center}
+\vspace{15mm}
+\begin{center}
+{\Huge{\bf Simulation Project Fall 2025}}
+\end{center}
+\vspace{100mm}
+\par
+\noindent
 
-\maketitle
-\section{Abstract}
+
+\begin{center}
+
+\includegraphics[width=0.35\textwidth]
+{unine_logo.png}\par\vspace{2cm}
+
+
+
+{\Large{\bf Keenan Hardy, Tim Gouvernon }}
+
+\vspace{10mm}
+
+{\large{\bf Autumn Semester 2025 }}
+
+
+
+
+
+\end{center}
+\end{titlepage}
+\newpage
+
+
+\begin{abstract}
+This is our report presenting a comprehensive performance analysis of computing systems modeled as queuing networks using discrete event simulation. We investigate two distinct system architectures: a closed queuing network representing a batch processing environment and an open queuing network representing a transaction based system. For the closed network, we evaluate the impact of load balancing strategies (Random, Proportional, and Join-the-Shorter-Queue) and hardware upgrades on system throughput and response time. Our results demonstrate that the Join-the-Shorter-Queue strategy maximizes performance and that system throughput is strictly limited by the bottleneck resource, shifting between Input and Output bound and CPU bound states as configurations change. In the open network analysis, we determine the maximum sustainable throughput, confirming it is bounded by the CPU capacity of 10 jobs/second, and compare disk queuing disciplines, finding that a single shared queue marginally outperforms separate queues with dynamic routing. All our simulations were implemented in Python using the \texttt{simpy}.
+\end{abstract}
+\newpage
+\tableofcontents
+\listoffigures
+\listoftables
+\newpage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+
+
+
+\newpage
 \section{Introduction}
+In this project, we explore the dynamics of both closed and open queuing networks using discrete event simulation. Our primary goal is to analyze how different system configurations and load balancing strategies impact key performance metrics, specifically system throughput ($X$) and average response time ($E[R]$).
+
+The study is divided into two main parts. In the first part, we simulate a \textbf{closed queuing network} representing a batch processing system where a fixed number of jobs ($N$) circulate between a CPU and a storage subsystem. We investigate the system's behavior under heavy load conditions, identifying bottlenecks as we vary the number of concurrent jobs. Furthermore, we evaluate the effectiveness of three different load balancing strategies Random, Proportional, and Join-the-Shorter-Queue (JSQ) in distributing Input and Output requests across a heterogeneous disk array consisting of fast and slow disks. We also quantify the performance gains achievable through hardware upgrades, such as doubling the CPU speed or adding additional fast disks.
+
+In the second part, we examine an \textbf{open queuing network}, where jobs arrive from an external source according to a Poisson process. This model reflects transaction processing systems where the arrival rate ($\lambda$) is independent of the system's current state. Here, we focus on determining the maximum sustainable throughput before system saturation occurs. We also compare the impact of two different queuing disciplines at the disk stage a single shared queue versus separate queues with dynamic routing on the overall job response time.
+
+By implementing these simulations in Python using the \texttt{simpy} library, we bridge the gap between theoretical queuing laws (such as Little's Law) and practical system behavior. The results presented in this report provide quantitative insights into resource utilization, bottleneck shifting, and the trade offs involved in designing high performance computing systems.\cite{chen2025simulation}
+
 \section{Closed Queuing network simulation}
 \subsection{Overview}
-\subsection{Implementation choices}
-\subsection{Experiment settings}
+In this section, we simulated a closed queuing network representing a computing system with a CPU and a two disk storage system (consisting of a fast and a slow disk). The primary objectives was to analyze system performance under varying workloads and hardware configurations. Specifically, we investigated the impact of different load balancing strategies, CPU speed improvements, and increase disk availability on system throughput ($X$) and average response time ($E[R]$)
+
+
+The system consists of $N$ jobs circulating in a closed loop through three distinct phases:
+\begin{enumerate}
+    \item \textbf{CPU Processing:} Jobs request service from the CPU.
+    \item \textbf{Input and Output Processing:} Jobs request service from either a "fast" or "slow" disk.
+    \item \textbf{Thinking/Resting:} Jobs enter a delay state before restarting the cycle.
+\end{enumerate}
+
+By simulating the system one event at a time, we were able to identify performance bottlenecks and evaluate the effectiveness of different optimization strategies.
+
+\subsection{Implementation Choices}
+We built our simulation in Python using the \texttt{simpy} library, which works by modeling processes that interact with each other. Here is how we set it up:
+
+\begin{itemize}
+    \item \textbf{Job Generators:} Each job is modeled as a generator function \texttt{job\_generator()}, which loops indefinitely through the CPU, Disk, and Rest phases. This structure allows for the natural modeling of concurrent processes within the simulation environment.
+    \item \textbf{Resources:} The CPU and disks are modeled as \texttt{simpy.Resource} objects with a capacity of 1, ensuring mutual exclusion and First-Come-First-Served (FCFS) scheduling.
+    \item \textbf{Randomness:} We utilized \texttt{numpy.random.default\_rng(seed=0)} to ensure reproducibility across experiments. Service times for all components are exponentially distributed (using \texttt{RNG.exponential}), reflecting the memoryless arrival and service patterns typical in queuing theory.
+    \item \textbf{Load Balancing Logic:} The disk selection logic was encapsulated in a private helper method \texttt{\_select\_disk()}, allowing for seamless switching between strategies (Random, Proportional, and JSQ) without altering the core process flow.
+    \item \textbf{Metrics Collection:} 
+    \begin{itemize}
+        \item \textbf{Throughput ($X$):} Calculated as $\frac{\text{Completed Cycles}}{\text{Total Simulation Time}}$.
+        \item \textbf{Response Time ($E[R]$):} Derived using Little's Law for closed systems: $E[R] = \frac{N}{X} - Z$, where $Z$ is the mean think time. \cite{littles_law_cfi} \cite{factorio_littles_law}
+    \end{itemize}
+\end{itemize}
+
+
+\subsection{Experiment Settings}
+We conducted simulations across four distinct hardware scenarios and three load balancing strategies. The common parameters for all experiments were:
+\begin{itemize}
+    \item \textbf{Simulation Length:} 100,000 time units (to ensure steady state).
+    \item \textbf{Repetitions:} 5 runs per data point (averaged).
+    \item \textbf{Workload ($N$):} Varied from 10 to 160 jobs to observe system saturation.
+    \item \textbf{Service Times (Mean):}
+    \begin{itemize}
+        \item Fast Disk: 3.0 seconds
+        \item Slow Disk: 30.0 seconds
+        \item Think Time ($Z$): 15.0 seconds
+    \end{itemize}
+\end{itemize}
+
+\textbf{Scenarios:}
+\begin{enumerate}
+    \item \textbf{Baseline:} CPU = 2.0s, 1 Fast Disk, 1 Slow Disk.
+    \item \textbf{Faster CPU:} CPU = 1.0s, 1 Fast Disk, 1 Slow Disk.
+    \item \textbf{Second Fast Disk:} CPU = 2.0s, \textbf{2 Fast Disks}, 1 Slow Disk.
+    \item \textbf{Combined Improvements:} CPU = 1.0s, \textbf{2 Fast Disks}, 1 Slow Disk.
+\end{enumerate}
+
+\textbf{Strategies Compared:}
+\begin{itemize}
+    \item \textbf{Random:} 50/50 split between fast and slow disks.
+    \item \textbf{Proportional:} Routed $\approx 91\%$ of traffic to the fast disk (matching the 10:1 speed ratio).
+    \item \textbf{JSQ (Join-the-Shorter-Queue):} Dynamically routed jobs to the disk with the fewest waiting jobs.
+\end{itemize}
+
 \subsection{Results}
 
-% \begin{figure}[ht]
-%     \centering
-%     \includegraphics[width=1\linewidth]{Code/Terminal Output.png}
-%     \caption{Terminal Output for Ex 1 Part 1}
-%     \label{fig:placeholder}
-% \end{figure}
+\subsubsection{Load Balancing Strategy Comparison}
+We first compared the strategies on the Baseline hardware.
+\begin{itemize}
+    \item \textbf{Random:} Performed poorly ($X_{max} \approx 0.068$), causing a massive bottleneck at the slow disk.
+    \item \textbf{Proportional:} Significantly improved throughput ($X_{max} \approx 0.366$).
+    \item \textbf{JSQ:} Yielded the best performance ($X_{max} \approx 0.367$). By actively sensing queue depths, JSQ prevented transient pile ups.
+\end{itemize}
+\textbf{Conclusion:} \textbf{JSQ} was selected as the optimal strategy for all subsequent experiments.
+
+\subsubsection{Impact of Hardware Upgrades}
+Using the JSQ strategy, we evaluated the impact of upgrading components. The saturation throughput results (at $N=160$) are summarized in Table \ref{tab:results}.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{|l|l|c|l|}
+\hline
+\textbf{Scenario} & \textbf{Configuration} & \textbf{Max $X$} & \textbf{Bottleneck Analysis} \\ \hline
+1 (Baseline) & 2s CPU, 1 Fast Disk & 0.367 & \textbf{Input and Output Bound.} Limited by disk capacity. \\ \hline
+2 (Fast CPU) & 1s CPU, 1 Fast Disk & 0.367 & \textbf{Input and Output Bound.} CPU upgrade had zero impact. \\ \hline
+3 (2 Disks) & 2s CPU, 2 Fast Disks & 0.500 & \textbf{CPU Bound.} Hit theoretical CPU limit ($1/2.0s$). \\ \hline
+4 (Combined) & 1s CPU, 2 Fast Disks & 0.700 & \textbf{Input and Output Bound.} Bottleneck shifted back to disks. \\ \hline
+\end{tabular}
+\caption{Maximum Throughput and Bottleneck Analysis by Scenario}
+\label{tab:results}
+\end{table}
+
+\subsubsection{Response Time Analysis}
+Scenario 4 provided the lowest response times across all loads ($E[R] \approx 42s$ at $N=40$), improving by over \textbf{35\%} compared to Scenario 3 ($65s$). Scenarios 1 and 2 exhibited the worst response times ($>90s$ at $N=40$) due to the severe disk bottleneck.
 
 
+\subsubsection{Theoretical Validation}
+Before analyzing the simulation results, we computed the theoretical maximum throughput for each hardware scenario to validate our model. The theoretical limit is determined by the service rate of the slowest stage in the system (the bottleneck).
+
+\begin{itemize}
+    \item \textbf{Scenarios 1 \& 2 (1 Fast + 1 Slow Disk):}
+    The combined disk capacity is
+    \[
+        \mu_{\text{disks}} = \frac{1}{3.0} + \frac{1}{30.0} \approx 0.333 + 0.033 = 0.367 \text{ jobs/second}.
+    \]
+    This is lower than the CPU capacity in both cases, so the disks form the bottleneck and the theoretical maximum throughput is $X_{\max}^{\text{theory}} \approx 0.367$ jobs/second. Our simulations reach $X_{\max} \approx 0.367$, which matches the theoretical limit and confirms that the system is I/O bound.
+
+    \item \textbf{Scenario 3 (2 Fast Disks):}
+    With two fast disks and one slow disk, the aggregate disk capacity becomes
+    \[
+        \mu_{\text{disks}} = 2 \cdot \frac{1}{3.0} + \frac{1}{30.0} \approx 0.667 + 0.033 = 0.700 \text{ jobs/second}.
+    \]
+    The CPU capacity remains $1/2.0 = 0.500$ jobs/second, which is now lower than the disk capacity. Therefore, the CPU is the bottleneck and the theoretical maximum throughput is $X_{\max}^{\text{theory}} = 0.500$ jobs/second. The simulated value $X_{\max} \approx 0.500$ aligns exactly with this limit.
+
+    \item \textbf{Scenario 4 (Fast CPU + 2 Fast Disks):}
+    When both the CPU and disk subsystem are upgraded, the CPU capacity increases to $1/1.0 = 1.000$ jobs/second, while the disk capacity remains $\mu_{\text{disks}} \approx 0.700$ jobs/second. The disks again become the bottleneck, so the theoretical maximum throughput is $X_{\max}^{\text{theory}} \approx 0.700$ jobs/second, which is precisely what we observe in simulation.
+\end{itemize}
+
+These comparisons show that, in all four scenarios, the simulated saturation throughput matches the theoretical maximum. 
+
+
+\subsubsection{Performance Plots}
+The plots below illustrate the system behavior. Note how \textbf{Scenario 4} (Curve 4) achieves the highest saturation plateau, while \textbf{Scenario 1 \& 2} overlap, confirming that CPU upgrades alone do not help an Input and Output bound system.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{q5_final_plots.png}
+    \caption{System Throughput ($X$) and Expected Response Time ($E[R]$) vs. Number of Jobs ($N$).}
+    \label{fig:performance_plots}
+\end{figure}
+\newpage
 \section{Open Queuing network simulation}
 \subsection{Overview}
+In this exercise, we study an open queuing network where jobs arrive from outside the system according to a Poisson process with rate $\lambda$ jobs per second. Each job must be processed by a single CPU and then by one of two disks before departing the system. The service times at all resources are exponentially distributed.
 
-\subsection{Implementation choices}
-\subsection{Experiment settings}
+The CPU is modeled as a single server queue with service rate $\mu_{\text{CPU}} = 10$ jobs/second. After being processed by the CPU, each job is routed to one of two disks with equal probability, i.e., with probability $0.5$ to each disk. The \emph{fast} disk has service rate $\mu_{\text{fast}} = 12$ jobs/second, while the \emph{slow} disk has service rate $\mu_{\text{slow}} = 9$ jobs/second. All queues are assumed to have infinite buffer capacity, so no jobs are lost due to buffer overflows.
+
+The resulting job flow is therefore
+\[
+\text{Arrival} \;\longrightarrow\; \text{CPU} \;\longrightarrow\; 
+\begin{cases}
+\text{Fast disk} & \text{with probability } 0.5,\\
+\text{Slow disk} & \text{with probability } 0.5,
+\end{cases}
+\;\longrightarrow\; \text{Departure}.
+\]
+From a capacity point of view, the effective aggregate service rate of the disk stage can be approximated as
+\[
+\mu_{\text{disks}} = 0.5 \cdot 12 + 0.5 \cdot 9 = 10.5 \text{ jobs/second},
+\]
+while the CPU can process at most $10$ jobs/second. This makes the CPU the bottleneck of the system and suggests that the maximum sustainable throughput is approximately $10$ jobs/second, a result that is later validated by simulation.
+\subsection{Implementation Choices and Motivation}
+
+The simulator is implemented using the \texttt{simpy} discrete event simulation library in Python, which provides an expressive API for modeling resources, queues, and stochastic events such as arrivals and service completions. The choice of \texttt{simpy.Resource} for the CPU and disk servers allows a direct mapping between the queuing model and code, with resource capacities set to one to represent single server stations. Exponential inter arrival and service times are generated with NumPy’s random number utilities, matching the Poisson arrival and exponential service assumptions of the theoretical model. A fixed random seed is used to ensure reproducibility of the experiments across multiple runs. 
+
+For the load balancing strategies at the disk stage, two separate implementations are used to faithfully represent the two configurations required by the assignment. In the ``single queue'' case, a common \texttt{simpy.Store} is used as a shared waiting line in front of the two disk resources: jobs leaving the CPU are enqueued into this store, and each disk server process repeatedly retrieves the next job from this queue. This design closely mirrors the conceptual model of one physical waiting line feeding two parallel servers and simplifies the measurement of overall response time.
+
+In contrast, the ``shortest queue'' configuration maintains separate queues that are implicitly handled by the internal \texttt{simpy.Resource} queues of each disk. When a job finishes service at the CPU, the implementation inspects the current queue lengths (including jobs in service) of the fast and slow disk resources and sends the job to the disk with the smaller total number of jobs; ties are broken randomly. This explicit shortest queue routing logic captures a realistic load balancing policy that exploits instantaneous queue length information, allowing a direct comparison with the simpler single queue setup in terms of average response time under different arrival rates. 
+\subsection{Experiment Settings}
+
+All experiments are based on the same open queuing network structure: arrivals follow a Poisson process with rate $\lambda$ jobs/second, service times at the CPU and disks are exponentially distributed, and each station is modeled as a single server queue with infinite buffer capacity. The CPU service rate is fixed to $\mu_{\text{CPU}} = 10$ jobs/second, while the fast and slow disks have service rates $\mu_{\text{fast}} = 12$ jobs/second and $\mu_{\text{slow}} = 9$ jobs/second, respectively. For each configuration, the simulator is run for a sufficiently long horizon (on the order of $10^6$ time units) to ensure that transient effects are negligible and that time averaged performance metrics are stable.
+
+To study the maximum sustainable throughput, multiple simulations are performed for different arrival rates $\lambda$ around the theoretical bottleneck value of $10$ jobs/second, and the empirical throughput is computed as the number of completed jobs divided by the total simulated time. This allows observing how the system saturates as $\lambda$ approaches the CPU capacity and how utilizations of the CPU and disks evolve. For the response time comparison, three representative arrival rates are selected (e.g., $\lambda = 5.0,\; 7.0,\; 8.5$ jobs/second), and for each $\lambda$ two separate simulations are run: one with a single shared disk queue and one with the shortest queue routing policy. In both cases, the mean response time is estimated by accumulating each job’s temporary time from arrival to final departure and dividing by the total number of completed jobs. 
+
 \subsection{Results}
-\subsection{Question 2.1}
-To see what the maximum sustainable throughput we need to simulate the system using different $lambdas$. In our case we will try with this list : $[7.0, 8.0, 8.5, 9.0, 9.5, 10.0]$. Also we will run the simulation for the equivalent of 1'000'000 seconds. 
+
+\subsubsection{Maximum Sustainable Throughput}
+
+To estimate the maximum sustainable throughput, the system was simulated for arrival rates $\lambda$ between 7 and 10 jobs/second. For each $\lambda$, the empirical throughput $X$ and utilizations of the CPU and disks were recorded over a long horizon (1'000'000 time frames). Table~\ref{tab:throughput} summarizes a representative subset of these results. 
+
 \begin{table}[ht]
   \centering
-  \caption{Throughput and utilizations for different arrival rates}
-  \begin{tabular}{c c c c c c}
+  \caption{Throughput and utilizations for different arrival rates.}
+  \label{tab:throughput}
+  \begin{tabular}{c c c c c}
     \hline
-    $\lambda$ & $X$ & $\rho_{\text{CPU}}$ & $\rho_{\text{fast}}$ & $\rho_{\text{slow}}$ & $\rho_{\text{sys}}$ \\
+    $\lambda$ & $X$ & $\rho_{\text{CPU}}$ & $\rho_{\text{fast}}$ & $\rho_{\text{slow}}$ \\
     \hline
-    7.0  & 6.999 & 0.700 & 0.292 & 0.389 & 0.870 \\
-    8.0  & 7.999 & 0.801 & 0.333 & 0.444 & 0.926 \\
-    8.5  & 8.497 & 0.850 & 0.354 & 0.472 & 0.949 \\
-    9.0  & 8.997 & 0.900 & 0.375 & 0.500 & 0.969 \\
-    9.5  & 9.502 & 0.950 & 0.396 & 0.527 & 0.986 \\
-    10.0 & 9.997 & 1.000 & 0.417 & 0.555 & 1.000 \\
+    7.0  & 6.995 & 0.699 & 0.291 & 0.388 \\
+    8.0  & 8.002 & 0.800 & 0.334 & 0.445 \\
+    8.5  & 8.500 & 0.850 & 0.354 & 0.473 \\
+    9.0  & 9.000 & 0.900 & 0.375 & 0.500 \\
+    9.5  & 9.501 & 0.951 & 0.396 & 0.528 \\
+    10.0 & 9.997 & 0.999 & 0.417 & 0.555 \\
     \hline
   \end{tabular}
 \end{table}
 
-As we can see in this table (which comes from our simulation), the utilisation of the CPU rise as we augment $\lambda$ until it reaches 1 when $\lambda=10$. At the same time we can see that both of the disks are still about halfway on their max performance. We can conclude that in this system the bottleneck is the CPU in this system case. 
+The results show that the throughput closely tracks the arrival rate as long as $\lambda < 10$, and starts to saturate around $X \approx 10$ jobs/second. At $\lambda = 10$, the CPU utilization is essentially $1$, while both disks remain below full utilization, confirming that the CPU is the bottleneck. This empirically supports the theoretical prediction that the maximum sustainable throughput is approximately 10 jobs/second. 
 
-\subsection{Question 2.2}
+\subsubsection{Response Times for Disk Configurations}
 
+For the response time analysis, three arrival rates were considered: $\lambda \in \{5.0, 7.0, 8.5\}$ jobs/second. For each $\lambda$, two simulations were run: one with a single shared queue feeding both disks, and one with separate disk queues and shortest queue routing from the CPU. The mean response times $E[T]$ obtained from the simulations are reported in Table~\ref{tab:resp_times}. 
+
+\begin{table}[ht]
+  \centering
+  \caption{Mean response times for single queue and shortest queue configurations.}
+  \label{tab:resp_times}
+  \begin{tabular}{c c c}
+    \hline
+    $\lambda$ & $E[T]$ single queue & $E[T]$ shortest queue \\
+    \hline
+    5.0 & 0.3023 & 0.3059 \\
+    7.0 & 0.4416 & 0.4471 \\
+    8.5 & 0.7806 & 0.7906 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+The measured response times of the two configurations are very close for all tested arrival rates, with the single queue system performing slightly better in this particular parameter setting. This is consistent with queuing theory intuition that a common waiting line tends to balance server idleness more effectively, whereas the shortest queue policy relies on instantaneous queue length information that can still lead to small load imbalances. Overall, both strategies remain stable and show increasing response times as the arrival rate approaches the system’s capacity. 
+% \subsection{Question 2.1}
+% To see what the maximum sustainable throughput we need to simulate the system using different $lambdas$. In our case we will try with this list : $[7.0, 8.0, 8.5, 9.0, 9.5, 10.0]$. Also we will run the simulation for the equivalent of 1'000'000 seconds. 
+% \begin{table}[ht]
+%   \centering
+%   \caption{Throughput and utilizations for different arrival rates}
+%   \begin{tabular}{c c c c c c}
+%     \hline
+%     $\lambda$ & $X$ & $\rho_{\text{CPU}}$ & $\rho_{\text{fast}}$ & $\rho_{\text{slow}}$ & $\rho_{\text{sys}}$ \\
+%     \hline
+%     7.0  & 6.999 & 0.700 & 0.292 & 0.389 & 0.870 \\
+%     8.0  & 7.999 & 0.801 & 0.333 & 0.444 & 0.926 \\
+%     8.5  & 8.497 & 0.850 & 0.354 & 0.472 & 0.949 \\
+%     9.0  & 8.997 & 0.900 & 0.375 & 0.500 & 0.969 \\
+%     9.5  & 9.502 & 0.950 & 0.396 & 0.527 & 0.986 \\
+%     10.0 & 9.997 & 1.000 & 0.417 & 0.555 & 1.000 \\
+%     \hline
+%   \end{tabular}
+% \end{table}
+
+% As we can see in this table (which comes from our simulation), the utilisation of the CPU rise as we augment $\lambda$ until it reaches 1 when $\lambda=10$. At the same time we can see that both of the disks are still about halfway on their max performance. We can conclude that in this system the bottleneck is the CPU in this system case. 
+\section{Conclusion}
+For the \textbf{closed queuing network}, our investigation into load balancing strategies revealed that the Join-the-Shorter-Queue (JSQ) approach offers superior stability and throughput compared to random or proportional routing, particularly under variable load conditions. We observed that upgrading a non bottleneck resource yielded negligible performance gains. Significant throughput improvements were only achieved when the storage subsystem's capacity was expanded (by adding a second fast disk), which transitioned the system from being Input and Output bound to CPU bound. The highest performance was ultimately realized by addressing both processing and storage limitations simultaneously, achieving a saturation throughput of approximately $0.7$ jobs/second.
+
+In the \textbf{open queuing network} analysis, we empirically verified that the maximum sustainable throughput is strictly dictated by the system's bottleneck resource. Our simulations confirmed that the CPU, with a capacity of 10 jobs/second, limits the entire system's throughput regardless of the disk subsystem's available capacity. Furthermore, our comparison of queuing disciplines at the disk stage demonstrated that a single shared queue architecture marginally outperforms separate queues with dynamic shortest queue routing. This result aligns with the theoretical principle that pooling resources tends to minimize server idleness and reduce average response times \cite{AdanWeiss2017}.
+
+Overall, this study underscores the critical role of simulation in system design. By modeling complex interactions between CPUs and storage devices, we can predict saturation points, evaluate the effectiveness of hardware upgrades, and make informed decisions about load balancing strategies before implementing them in physical systems.
+\printbibliography
 \end{document}
