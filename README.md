@@ -4,8 +4,6 @@
 
 This project simulates closed and open queueing network systems to analyze throughput, response times, and the impact of hardware upgrades and load balancing strategies.
 
-**Course Context:** Performance Analysis of Computer Systems  
-**Technologies:** Python, SimPy, NumPy, Matplotlib  
 **Date:** Fall 2025
 
 ---
