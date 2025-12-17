@@ -74,6 +74,7 @@ Separate queues with JSQ load balancing from CPU to disk selection.
 ### 1. Clone Repository
 
 git clone https://github.com/HardyUnine/Simulation25Fall-Project.git
+
 cd Simulation25Fall-Project
 
 ### 2. Create Virtual Environment
