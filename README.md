@@ -80,12 +80,14 @@ Separate queues with JSQ load balancing from CPU to disk selection.
 ### 2. Create Virtual Environment
 
 **macOS:**
+
 ``python3 -m venv venv``
 
 ``source venv/bin/activate``
 
 
 **Windows:**
+
 ``python -m venv venv``
 
 ``.\venv\Scripts\activate``
@@ -93,7 +95,4 @@ Separate queues with JSQ load balancing from CPU to disk selection.
 
 ### 3. Install Dependencies
 
-pip install -r requirements.txt
-
-
-
+``pip install -r requirements.txt``
