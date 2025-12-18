@@ -50,21 +50,29 @@ A system with N=40 jobs circulating through:
 
 ---
 
-## Part 2: Open Queueing Network (Questions 1-2)
+## Part 2: Open Queueing Network
 
-Jobs arrive via Poisson process (rate λ), process through CPU then disk, and leave.
+In the open network, jobs arrive from outside according to a Poisson process with rate λ, are processed by a single CPU, then by one of two disks, and finally leave the system. Service times are exponential.
 
-- **CPU Service Rate:** 10 jobs/sec
-- **Fast Disk Service Rate:** 12 jobs/sec
-- **Slow Disk Service Rate:** 9 jobs/sec
+- **CPU service rate:** μ_CPU = 10 jobs/sec  
+- **Fast disk service rate:** μ_fast = 12 jobs/sec  
+- **Slow disk service rate:** μ_slow = 9 jobs/sec  
 
-### Q2a: Single Queue Strategy
+The effective disk stage capacity is about 10.5 jobs/sec, so the **CPU is the theoretical bottleneck** and the maximum sustainable throughput is ≈ 10 jobs/sec. This is confirmed by simulation: as λ increases, throughput X tracks λ up to about 10 jobs/sec, at which point CPU utilization reaches 100% while both disks remain below full utilization.
 
-Common queue for both disks with random routing.
+### Disk queueing configurations
 
-### Q2b: Shortest Queue Strategy
+The project compares two queueing disciplines at the disk stage:
 
-Separate queues with JSQ load balancing from CPU to disk selection.
+- **Single shared queue**
+
+  A single common waiting line feeds both disks. Jobs leaving the CPU join a shared queue (modeled with a `simpy.Store`), and each disk repeatedly pulls the next job from this queue. This mirrors one physical line in front of two servers and tends to keep both disks well utilized.
+
+- **Separate queues with shortest-queue routing**
+
+  Each disk has its own queue (the internal `simpy.Resource` queues). When a job finishes at the CPU, the current queue lengths (including jobs in service) of the fast and slow disks are inspected, and the job is routed to the disk with fewer total jobs (ties are broken randomly). This implements a dynamic shortest-queue policy.
+
+For representative arrival rates (e.g., λ = 5.0, 7.0, 8.5 jobs/sec), simulations show that both configurations are stable and that mean response times are very close. The **single shared queue** is consistently, but only slightly, better, which aligns with queuing theory intuition that pooling customers into one line reduces server idleness.
 
 
 ---
